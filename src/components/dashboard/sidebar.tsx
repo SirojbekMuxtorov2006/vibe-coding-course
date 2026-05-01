@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -14,27 +15,32 @@ import {
   Zap,
   ChevronLeft,
   ChevronRight,
+  ChevronRight,
   BookOpen,
   BarChart3,
+  Users,
 } from "lucide-react";
+import { useClerk } from "@clerk/nextjs";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
-  { icon: PlayCircle, label: "Lessons", id: "lessons" },
-  { icon: Code2, label: "Code Playground", id: "playground" },
-  { icon: Bot, label: "AI Assistant", id: "chatbot" },
-  { icon: Trophy, label: "Achievements", id: "achievements" },
-  { icon: BarChart3, label: "Progress", id: "progress" },
-  { icon: BookOpen, label: "Resources", id: "resources" },
+  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
+  { icon: PlayCircle, label: "Lessons", href: "/dashboard/lessons" },
+  { icon: Code2, label: "Code Playground", href: "/dashboard/playground" },
+  { icon: Bot, label: "AI Assistant", href: "/dashboard/chatbot" },
+  { icon: Trophy, label: "Achievements", href: "/dashboard/achievements" },
+  { icon: BarChart3, label: "Progress", href: "/dashboard/progress" },
+  { icon: Users, label: "Community", href: "/dashboard/community" },
+  { icon: BookOpen, label: "Resources", href: "/dashboard/resources" },
 ];
 
 interface SidebarProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
+export function Sidebar({ onNavigate }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const pathname = usePathname();
+  const { signOut } = useClerk();
 
   return (
     <aside
@@ -63,44 +69,48 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       </div>
 
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => onTabChange(item.id)}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer",
-              activeTab === item.id
-                ? "bg-purple-500/10 text-purple-300 shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
-            )}
-          >
-            <item.icon
+        {navItems.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onNavigate}
               className={cn(
-                "h-5 w-5 shrink-0",
-                activeTab === item.id ? "text-purple-400" : ""
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer",
+                isActive
+                  ? "bg-purple-500/10 text-purple-300 shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
-            />
-            {!collapsed && <span>{item.label}</span>}
-            {activeTab === item.id && !collapsed && (
-              <div className="ml-auto h-1.5 w-1.5 rounded-full bg-purple-400" />
-            )}
-          </button>
-        ))}
+            >
+              <item.icon
+                className={cn(
+                  "h-5 w-5 shrink-0",
+                  isActive ? "text-purple-400" : ""
+                )}
+              />
+              {!collapsed && <span>{item.label}</span>}
+              {isActive && !collapsed && (
+                <div className="ml-auto h-1.5 w-1.5 rounded-full bg-purple-400" />
+              )}
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="p-3 border-t border-border space-y-1">
-        <button className={cn(
+        <Link href="/dashboard/settings" className={cn(
           "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
         )}>
           <Settings className="h-5 w-5 shrink-0" />
           {!collapsed && <span>Settings</span>}
-        </button>
-        <Link href="/" className={cn(
-          "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-red-400 hover:bg-red-500/5 transition-colors"
+        </Link>
+        <button onClick={() => signOut()} className={cn(
+          "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-red-400 hover:bg-red-500/5 transition-colors cursor-pointer"
         )}>
           <LogOut className="h-5 w-5 shrink-0" />
           {!collapsed && <span>Log Out</span>}
-        </Link>
+        </button>
       </div>
     </aside>
   );

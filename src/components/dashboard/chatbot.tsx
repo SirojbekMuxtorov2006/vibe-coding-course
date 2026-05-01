@@ -42,51 +42,50 @@ export function Chatbot() {
     }
   }, [messages, isTyping]);
 
-  const simulateResponse = (userMessage: string) => {
-    setIsTyping(true);
+  const handleSend = async (text?: string) => {
+    const messageText = text || input.trim();
+    if (!messageText || isTyping) return;
 
-    const responses: Record<string, string> = {
-      "Explain React hooks":
-        "**React Hooks** are functions that let you use state and lifecycle features in functional components.\n\nThe most common hooks are:\n\n• `useState` — Manage local state\n• `useEffect` — Handle side effects\n• `useContext` — Access context values\n• `useRef` — Reference DOM elements\n• `useMemo` — Memoize expensive calculations\n\nHere's a quick example:\n```tsx\nconst [count, setCount] = useState(0);\n```\n\nWant me to go deeper into any specific hook?",
-      "How do I use async/await?":
-        "**Async/Await** makes asynchronous code look synchronous!\n\n```javascript\nasync function fetchData() {\n  try {\n    const response = await fetch('/api/data');\n    const data = await response.json();\n    console.log(data);\n  } catch (error) {\n    console.error('Error:', error);\n  }\n}\n```\n\nKey points:\n• `async` marks a function as asynchronous\n• `await` pauses execution until the promise resolves\n• Always wrap in `try/catch` for error handling\n\nNeed more examples?",
-      "Review my code":
-        "I'd love to review your code! 🔍\n\nYou can paste your code here and I'll analyze it for:\n\n• **Best practices** — Is it following conventions?\n• **Performance** — Any optimization opportunities?\n• **Security** — Potential vulnerabilities?\n• **Readability** — Can it be cleaner?\n\nGo ahead and paste your code!",
+    const userMsg: Message = {
+      id: messages.length + 1,
+      role: "user",
+      content: messageText,
+      timestamp: new Date(),
     };
 
-    setTimeout(() => {
-      const responseText =
-        responses[userMessage] ||
-        `Great question about "${userMessage}"! 🤔\n\nLet me break this down for you:\n\n1. This is a fundamental concept in modern development\n2. Understanding it will help you build better applications\n3. Practice with real projects is the best way to learn\n\nWould you like me to provide a code example or explain further?`;
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: prev.length + 1,
-          role: "assistant",
-          content: responseText,
-          timestamp: new Date(),
-        },
-      ]);
-      setIsTyping(false);
-    }, 1500);
-  };
-
-  const handleSend = (text?: string) => {
-    const messageText = text || input.trim();
-    if (!messageText) return;
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: prev.length + 1,
-        role: "user",
-        content: messageText,
-        timestamp: new Date(),
-      },
-    ]);
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
-    simulateResponse(messageText);
+    setIsTyping(true);
+
+    try {
+      const res = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: messageText, context: "general" }),
+      });
+
+      if (!res.ok) throw new Error("Failed to get response");
+      
+      const data = await res.json();
+      
+      const botMsg: Message = {
+        id: messages.length + 2,
+        role: "assistant",
+        content: data.response || "Sorry, I couldn't process that request.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, botMsg]);
+    } catch (error) {
+      const errorMsg: Message = {
+        id: messages.length + 2,
+        role: "assistant",
+        content: "Error: Could not connect to AI service.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (
